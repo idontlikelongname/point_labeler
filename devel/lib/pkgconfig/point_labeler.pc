@@ -1,0 +1,8 @@
+prefix=/home/yangxx/codes/point_labeler/devel
+
+Name: point_labeler
+Description: Description of point_labeler
+Version: 0.0.1
+Cflags: -I/usr/include
+Libs: -L/home/yangxx/codes/point_labeler/devel/lib /usr/lib/x86_64-linux-gnu/libboost_filesystem.so /usr/lib/x86_64-linux-gnu/libboost_system.so
+Requires: glow

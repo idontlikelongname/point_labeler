@@ -1,0 +1,8 @@
+prefix=/home/yangxx/codes/point_labeler/devel
+
+Name: glow
+Description: Description of glow
+Version: 0.0.1
+Cflags: -I/home/yangxx/codes/point_labeler/src/glow/src/
+Libs: -L/home/yangxx/codes/point_labeler/devel/lib -lglow -lglow_util
+Requires: 
