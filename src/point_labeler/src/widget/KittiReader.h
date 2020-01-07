@@ -10,6 +10,12 @@
 #include "common.h"
 #include "data/kitti_utils.h"
 
+#include <pcl/io/pcd_io.h>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+
+#include "point_types.h"
+
 /** \brief tile-based KITTI reader.
  *
  *  Given a size of a tile, the reader reads all scans that potentially overlap with the tile.

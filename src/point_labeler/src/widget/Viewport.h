@@ -26,9 +26,11 @@
 #include <glow/GlShaderCache.h>
 #include <glow/GlTexture.h>
 #include <glow/GlVertexArray.h>
+#include <glow/util/FpsCamera.h>
 #include <glow/util/GlCamera.h>
 #include <glow/util/RoSeCamera.h>
 #include "CADCamera.h"
+#include "PCLCamera.h"
 
 #include "common.h"
 
@@ -294,7 +296,6 @@ class Viewport : public QGLWidget {
 
   Eigen::Matrix4f view_{Eigen::Matrix4f::Identity()};
   Eigen::Matrix4f projection_{Eigen::Matrix4f::Identity()};
-  Eigen::Matrix4f conversion_{glow::RoSe2GL::matrix};
 
   std::map<std::string, bool> drawingOption_;
 

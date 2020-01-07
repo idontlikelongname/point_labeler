@@ -87,6 +87,28 @@ vec3 jet(float v)
     return mix(interval_colors[max(0, idx-1)], interval_colors[idx], alpha);
 }
 
+vec3 rainbow(float level)
+{
+	/*
+		Target colors
+		=============
+		
+		L  x   color
+		0  0.0 vec4(1.0, 0.0, 0.0, 1.0);
+		1  0.2 vec4(1.0, 0.5, 0.0, 1.0);
+		2  0.4 vec4(1.0, 1.0, 0.0, 1.0);
+		3  0.6 vec4(0.0, 0.5, 0.0, 1.0);
+		4  0.8 vec4(0.0, 0.0, 1.0, 1.0);
+		5  1.0 vec4(0.5, 0.0, 0.5, 1.0);
+	*/
+
+
+  float r = float(level <= 2.0) + float(level > 4.0) * 0.5;
+	float g = max(1.0 - abs(level - 2.0) * 0.5, 0.0);
+	float b = (1.0 - (level - 4.0) * 0.5) * float(level >= 4.0);
+	return vec3(r, g, b);
+}
+
 
 void main()
 {
@@ -142,8 +164,7 @@ void main()
       }
       else
       {
-        if(gamma > 0.0) in_remission = pow(in_remission, 1.0/gamma);
-      
+        // if(gamma > 0.0) in_remission = pow(in_remission, 1.0/gamma);
 
         if(colormap == 1)
         {
@@ -159,8 +180,14 @@ void main()
         }
         else
         {
-          float r = in_remission * 0.7 + 0.3; // r in [0.3, 1.0]
-          color = vec4(hsv2rgb(vec3(1, 1, r) * rgb2hsv(vec3(0.5, 0.5, 0.5))), 1.0);
+          // float r = in_remission * 0.7 + 0.3; // r in [0.3, 1.0]
+          // color = vec4(hsv2rgb(vec3(1, 1, r) * rgb2hsv(vec3(0.5, 0.5, 0.5))), 1.0);
+
+          float level1 = floor(in_remission*6.0);
+          float level2 = min(6.0, floor(in_remission*6.0) + 1.0);
+          vec3 a = rainbow(level1);
+          vec3 b = rainbow(level2);
+          color =  vec4(mix(a, b, fract(in_remission*6.0)), 1.0);
         }
          
       }

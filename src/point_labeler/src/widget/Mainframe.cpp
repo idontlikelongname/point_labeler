@@ -41,6 +41,10 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
 
   connect(ui.actionOpen, SIGNAL(triggered()), this, SLOT(open()));
   connect(ui.actionSave, SIGNAL(triggered()), this, SLOT(save()));
+  connect(ui.actionReload, &QAction::triggered, [this]() {
+    updateScans();
+    mChangesSinceLastSave = false;
+  });
 
   /** initialize the paint button mapping **/
   connect(ui.btnBrushMode, &QToolButton::released,
@@ -67,23 +71,19 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
     lblOverwrite_.setEnabled(ui.actionOverwrite->isChecked());
   });
 
+  //  connect(ui.btnFilter, &QCheckBox::toggled, [this](bool value) { updateFiltering(value); });
+  connect(ui.actionFilter, &QAction::toggled, [this](bool value) { updateFiltering(value); });
+
   connect(ui.spinPointSize, SIGNAL(valueChanged(int)), ui.mViewportXYZ, SLOT(setPointSize(int)));
 
   connect(ui.btnRadius5, &QToolButton::released, [this]() { changeRadius(10); });
   connect(ui.btnRadius10, &QToolButton::released, [this]() { changeRadius(25); });
   connect(ui.btnRadius20, &QToolButton::released, [this]() { changeRadius(50); });
-
   connect(ui.mRadiusSlider, SIGNAL(valueChanged(int)), this, SLOT(changeRadius(int)));
+
   connect(ui.sldTimeline, &QSlider::valueChanged, [this](int value) { setCurrentScanIdx(value); });
   connect(ui.btnForward, &QToolButton::released, [this]() { forward(); });
-
   connect(ui.btnBackward, &QToolButton::released, [this]() { backward(); });
-
-  //  connect(ui.btnFilter, &QCheckBox::toggled, [this](bool value) { updateFiltering(value); });
-  connect(ui.actionFilter, &QAction::toggled, [this](bool value) { updateFiltering(value); });
-
-  connect(ui.chkShowRemission, &QCheckBox::toggled,
-          [this](bool value) { ui.mViewportXYZ->setDrawingOption("remission", value); });
 
   connect(ui.chkRemoveGround, &QCheckBox::toggled, [this](bool value) { ui.mViewportXYZ->setGroundRemoval(value); });
   connect(ui.spinGroundThreshold, static_cast<void (QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),
@@ -93,6 +93,8 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
     ui.mViewportXYZ->setDrawingOption("single scan", value);
     ui.chkShowSingleScan_instance->setChecked(value);
   });
+  connect(ui.chkShowRemission, &QCheckBox::toggled,
+          [this](bool value) { ui.mViewportXYZ->setDrawingOption("remission", value); });
 
   connect(ui.chkShowSingleScan_instance, &QCheckBox::toggled, [this](bool value) {
     ui.mViewportXYZ->setDrawingOption("single scan", value);
@@ -108,11 +110,6 @@ Mainframe::Mainframe() : mChangesSinceLastSave(false) {
       wImgWidget_->setImage(images_[ui.sldTimeline->value()]);
       ui.mViewportXYZ->setDrawingOption("show camera", true);
     }
-  });
-
-  connect(ui.actionReload, &QAction::triggered, [this]() {
-    updateScans();
-    mChangesSinceLastSave = false;
   });
 
   connect(ui.btnButtonLayoutA, &QToolButton::released, [this]() {
@@ -529,8 +526,8 @@ void Mainframe::open() {
   if (!retValue.isNull()) {
     QDir base_dir(retValue);
 
-    if (!base_dir.exists("velodyne") || !base_dir.exists("poses.txt")) {
-      std::cout << "[ERROR] velodyne or poses.txt missing." << std::endl;
+    if (!base_dir.exists("velodyne") || !base_dir.exists("poses.csv")) {
+      std::cout << "[ERROR] velodyne or poses.csv missing." << std::endl;
       return;
     }
 

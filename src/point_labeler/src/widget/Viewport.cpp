@@ -40,8 +40,6 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
 
   drawingOption_["coordinate axis"] = true;
 
-  conversion_ = RoSe2GL::matrix;
-
   // FIXME: make max_size depending on memory. (have setting like AvailableMemory that specifies how much memory should
   // be used by program!)
   uint32_t max_size = maxScans_ * maxPointsPerScan_;
@@ -110,11 +108,14 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
                              RenderbufferFormat::DEPTH_STENCIL);
   fbMinimumHeightMap_.attach(FramebufferAttachment::DEPTH_STENCIL, depthbuffer);
 
-  setAutoFillBackground(false);
+  // setAutoFillBackground(false);
+  setAutoFillBackground(true);
 
   cameras_["Default"] = std::make_shared<RoSeCamera>();
   cameras_["CAD"] = std::make_shared<CADCamera>();
-  mCamera = cameras_["Default"];
+  cameras_["FPS"] = std::make_shared<FpsCamera>();
+  cameras_["PCL"] = std::make_shared<PCLCamera>();
+  mCamera = cameras_["PCL"];
 
   nnSampler_.setMinifyingOperation(TexMinOp::NEAREST);
   nnSampler_.setMagnifyingOperation(TexMagOp::NEAREST);
@@ -571,6 +572,7 @@ void Viewport::setOverwrite(bool value) {
 }
 
 void Viewport::setDrawingOption(const std::string& name, bool value) {
+  // TIPS: setting option map
   drawingOption_[name] = value;
 
   // trigger update.
@@ -581,12 +583,23 @@ void Viewport::setDrawingOption(const std::string& name, bool value) {
 
   if (name == "follow pose") {
     //    std::cout << "before \n" << camera_.matrix() << std::endl;
-    if (value == false)  // currently following, but now defollowing:
-    {
-      mCamera->setMatrix(mCamera->matrix() * conversion_ * points_[singleScanIdx_]->pose.inverse() *
-                         conversion_.inverse());
-    } else {
-      mCamera->setMatrix(mCamera->matrix() * conversion_ * points_[singleScanIdx_]->pose * conversion_.inverse());
+    // if (value == false)  // currently following, but now defollowing:
+    // {
+    //   mCamera->setMatrix(mCamera->matrix() * points_[singleScanIdx_]->pose.inverse());
+    // } else {
+    //   mCamera->setMatrix(mCamera->matrix() * points_[singleScanIdx_]->pose);
+    // }
+    if (value) {
+      Eigen::Matrix4f camera_pose = points_[singleScanIdx_]->pose;
+      Eigen::Vector3f rot_x(camera_pose.block<3, 3>(0, 0) * Eigen::Vector3f::UnitX());
+      camera_pose.block<3, 3>(0, 0) =
+          Eigen::AngleAxisf(static_cast<float>(std::atan2(rot_x[1], rot_x[0])), Eigen::Vector3f(0., 0., 1.)).matrix();
+      camera_pose(2, 3) = 15.0;
+      Eigen::Matrix4f conversion = Eigen::Matrix4f::Identity();
+      conversion.block<3, 3>(0, 0) = Eigen::AngleAxisf(M_PI / 2, Eigen::Vector3f(0., 0., 1.)).matrix();
+      camera_pose = camera_pose * conversion;
+      camera_pose = camera_pose.inverse();  // camera view_matrix=(pose_matrix).inverse()
+      mCamera->setMatrix(camera_pose);
     }
     //    std::cout << "after \n" << camera_.matrix() << std::endl;
   }
@@ -670,21 +683,27 @@ void Viewport::setLabelVisibility(uint32_t label, bool visible) {
 }
 
 void Viewport::initializeGL() {
-  glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+  glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
   glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_LEQUAL);
   glEnable(GL_LINE_SMOOTH);
 
-  mCamera->lookAt(5.0f, 5.0f, 5.0f, 0.0f, 0.0f, 0.0f);
+  // look at front direction
+  mCamera->lookAt(0.0f, 0.0f, 15.0f, 0.0f, 0.0f, 0.0f);
 }
 
 void Viewport::resizeGL(int w, int h) {
+  std::cout << "Resize GL\n";
+
   glViewport(0, 0, w, h);
 
   float aspect = float(w) / float(h);
 
+  // TODO:
   if (projectionMode_ == CameraProjection::perspective) {
-    float fov = radians(45.0f);
+    float fov = radians(30.0f);
+    // float fov = 2 * atan(h / (2 * 0.523599));
+    // float fov = 0.523599;
     projection_ = glPerspective(fov, aspect, 0.1f, 2000.0f);
   } else {
     float fov = 10.0f;
@@ -718,11 +737,11 @@ void Viewport::paintGL() {
     //    view_ = view_ * conversion_ * currentFrame_->pose.inverse() * conversion_.inverse();
 
     RoSeCamera dummy;
-    dummy.setMatrix(conversion_ * points_[singleScanIdx_]->pose.inverse() * conversion_.inverse());
+    dummy.setMatrix(points_[singleScanIdx_]->pose.inverse());
     view_ = view_ * dummy.matrix();
   }
 
-  mvp_ = projection_ * view_ * conversion_;
+  mvp_ = projection_ * view_;
 
   if (drawingOption_["coordinate axis"]) {
     // coordinateSytem_->pose = Eigen::Matrix4f::Identity();
@@ -771,7 +790,6 @@ void Viewport::paintGL() {
     plane_pose(2, 3) = points_[0]->pose(2, 3);
     if (drawingOption_["carAsBase"] && points_.size() > singleScanIdx_) {
       plane_pose = points_[singleScanIdx_]->pose;
-      //      plane_pose.col(3) = points_[singleScanIdx_]->pose.col(3);
     }
 
     prgDrawPoints_.setUniform(GlUniform<Eigen::Matrix4f>("plane_pose", plane_pose));
@@ -881,7 +899,6 @@ void Viewport::paintGL() {
     if (points_.size() > 0) plane_pose(2, 3) = points_[0]->pose(2, 3);
     if (drawingOption_["carAsBase"] && points_.size() > singleScanIdx_) {
       plane_pose = points_[singleScanIdx_]->pose;
-      //      plane_pose.col(3) = points_[singleScanIdx_]->pose.col(3);
     }
 
     prgDrawPlane_.setUniform(GlUniform<Eigen::Matrix4f>("plane_pose", plane_pose));
@@ -976,11 +993,11 @@ void Viewport::updateInstanceSelectionMap() {
     //    view_ = view_ * conversion_ * currentFrame_->pose.inverse() * conversion_.inverse();
 
     RoSeCamera dummy;
-    dummy.setMatrix(conversion_ * points_[singleScanIdx_]->pose.inverse() * conversion_.inverse());
+    dummy.setMatrix(points_[singleScanIdx_]->pose.inverse());
     view_ = view_ * dummy.matrix();
   }
 
-  mvp_ = projection_ * view_ * conversion_;
+  mvp_ = projection_ * view_;
 
   // store viewport, and clear color:
   GLfloat cc[4];
@@ -1047,7 +1064,7 @@ void Viewport::abortPolygonSelection() {
 void Viewport::wheelEvent(QWheelEvent* event) {
   mChangeCamera = false;
 
-  if (event->modifiers() == Qt::ControlModifier || mMode == PAINT || polygonPoints_.empty()) {
+  if (event->modifiers() != Qt::ControlModifier || mMode == PAINT || polygonPoints_.empty()) {
     QPoint numPixels = event->pixelDelta();
     QPoint numDegrees = event->angleDelta() / 8.;
     float delta = 0.0f;
@@ -1071,7 +1088,7 @@ void Viewport::mousePressEvent(QMouseEvent* event) {
   // if camera consumes the signal, simply return. // here we could also include some remapping.
   mChangeCamera = false;
 
-  if (event->modifiers() == Qt::ControlModifier) {
+  if (event->modifiers() != Qt::ControlModifier) {
     if (mCamera->mousePressed(event->windowPos().x(), event->windowPos().y(), resolveMouseButtonFlip(event->buttons()),
                               resolveKeyboardModifier(event->modifiers()))) {
       if (pressedkeys.empty()) {
@@ -1492,10 +1509,19 @@ void Viewport::keyPressEvent(QKeyEvent* event) {
     //        return;
     //      }
     // camera control
-    case Qt::Key_C:
+    case Qt::Key_Up:
       if (points_.size() > 0) {
         if (points_.size() == 0) return;
-        auto mat = conversion_ * points_[singleScanIdx_]->pose.inverse() * conversion_.inverse();
+        std::cout << "Top Down View\n";
+        // auto mat = points_[singleScanIdx_]->pose.inverse();
+        // std::cout << points_[singleScanIdx_]->pose << std::endl;
+        // mCamera->setMatrix(mat);
+        auto mat = mCamera->matrix();
+        mat.block<3, 3>(0, 0) = Eigen::Matrix3f::Identity();
+        mat = mat.inverse();
+        mat(2, 3) = 20.0;
+        mat = mat.inverse();
+        std::cout << mat << std::endl;
         mCamera->setMatrix(mat);
         updateGL();
       }
@@ -1614,11 +1640,11 @@ std::vector<uint32_t> Viewport::getSelectedLabels() {
     //    view_ = view_ * conversion_ * currentFrame_->pose.inverse() * conversion_.inverse();
 
     RoSeCamera dummy;
-    dummy.setMatrix(conversion_ * points_[singleScanIdx_]->pose.inverse() * conversion_.inverse());
+    dummy.setMatrix(points_[singleScanIdx_]->pose.inverse());
     view_ = view_ * dummy.matrix();
   }
 
-  mvp_ = projection_ * view_ * conversion_;
+  mvp_ = projection_ * view_;
   prgGetSelectedLabels_.setUniform(mvp_);
   prgGetSelectedLabels_.setUniform(GlUniform<int32_t>("numTriangles", numTriangles_));
 
@@ -1737,11 +1763,11 @@ void Viewport::labelPoints(int32_t x, int32_t y, float radius, uint32_t new_labe
     //    view_ = view_ * conversion_ * currentFrame_->pose.inverse() * conversion_.inverse();
 
     RoSeCamera dummy;
-    dummy.setMatrix(conversion_ * points_[singleScanIdx_]->pose.inverse() * conversion_.inverse());
+    dummy.setMatrix(points_[singleScanIdx_]->pose.inverse());
     view_ = view_ * dummy.matrix();
   }
 
-  mvp_ = projection_ * view_ * conversion_;
+  mvp_ = projection_ * view_;
 
   prgUpdateLabels_.setUniform(mvp_);
 
@@ -1968,7 +1994,7 @@ void Viewport::centerOnCurrentTile() {
   if (points_.size() == 0) return;
 
   Eigen::Vector4f t = points_[0]->pose.col(3);
-
+  // TODO:
   mCamera->lookAt(-tilePos_.y + 20, t.z() + 25, -tilePos_.x + 20, -tilePos_.y, t.z(), -tilePos_.x);
   updateGL();
 }
@@ -1978,6 +2004,7 @@ void Viewport::setPlaneRemoval(bool value) {
   updateGL();
 }
 
+// USELESS
 void Viewport::setPlaneRemovalParams(float threshold, int32_t dim, float direction) {
   planeThreshold_ = threshold;
   planeDimension_ = dim;

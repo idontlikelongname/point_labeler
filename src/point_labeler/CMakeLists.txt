@@ -11,6 +11,12 @@ find_package(Qt5Gui REQUIRED)
 find_package(Qt5OpenGL REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(Boost REQUIRED COMPONENTS filesystem system)
+# PCL
+find_package(PCL 1.7 REQUIRED)
+include_directories(${PCL_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS}) 
+add_definitions(${PCL_DEFINITIONS})
+list(REMOVE_ITEM PCL_LIBRARIES "vtkproj4")
 
 find_package(catkin COMPONENTS 
      glow)
@@ -100,6 +106,8 @@ add_executable(labeler
   src/widget/Viewport.cpp
   src/widget/CADCamera.h
   src/widget/CADCamera.cpp
+  src/widget/PCLCamera.h 
+  src/widget/PCLCamera.cpp
   src/widget/KittiReader.cpp
   src/widget/TileSelectorWidget.cpp
   src/widget/waitingspinnerwidget.cpp
@@ -129,5 +137,5 @@ if(GTEST_FOUND)
   add_subdirectory(src/test)
 endif()
 
-target_link_libraries(labeler ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES} pthread Qt5::Xml Qt5::OpenGL Qt5::Widgets)
+target_link_libraries(labeler ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES} ${PCL_LIBRARIES} pthread Qt5::Xml Qt5::OpenGL Qt5::Widgets)
 

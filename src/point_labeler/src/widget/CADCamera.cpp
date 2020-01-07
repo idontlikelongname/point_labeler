@@ -162,13 +162,13 @@ bool CADCamera::mouseMoved(float x, float y, MouseButton btn, KeyboardModifier m
   //  static const float WALK_SENSITIVITY = 0.5f;
   //  static const float TURN_SENSITIVITY = 0.01f;
   //  static const float SLIDE_SENSITIVITY = 0.5f;
-  static const float SLIDEX_SENSITIVITY = 0.01f;
-  static const float SLIDEY_SENSITIVITY = 0.01f;
-  static const float SLIDEU_SENSITIVITY = 0.01f;
+  static const float SLIDEX_SENSITIVITY = 0.003f;
+  static const float SLIDEY_SENSITIVITY = 0.003f;
+  static const float SLIDEU_SENSITIVITY = 0.003f;
   //  static const float RAISE_SENSITIVITY = 0.5f;
 
-  static const float LOOK_SENSITIVITY = 0.01f;
-  static const float FREE_TURN_SENSITIVITY = 0.01f;
+  static const float LOOK_SENSITIVITY = 0.003f;
+  static const float FREE_TURN_SENSITIVITY = 0.003f;
 
   float dx = x - startx_;
   float dy = y - starty_;
@@ -179,8 +179,14 @@ bool CADCamera::mouseMoved(float x, float y, MouseButton btn, KeyboardModifier m
   if (dy < 0.0f) dy = std::min(0.0f, dy + MIN_MOVE);
 
   // idea: if the velocity changes, we have to reset the start_time and update the camera parameters.
+  if (btn == MouseButton::LeftButton) {
+    yaw_ = startyaw_ - FREE_TURN_SENSITIVITY * dx;
+    pitch_ = startpitch_ - LOOK_SENSITIVITY * dy;
 
-  if (btn == MouseButton::RightButton) {
+    // ensure valid values.
+    if (pitch_ < -M_PI_2) pitch_ = -M_PI_2;
+    if (pitch_ > M_PI_2) pitch_ = M_PI_2;
+  } else if (btn == MouseButton::MiddleButton) {
     // translate(TURN_SENSITIVITY * dx,0,TURN_SENSITIVITY * dy);
     float sideways = SLIDEX_SENSITIVITY * dx * (-1);
     float forward = SLIDEY_SENSITIVITY * dy * std::sin(pitch_) * (-1);
@@ -197,15 +203,7 @@ bool CADCamera::mouseMoved(float x, float y, MouseButton btn, KeyboardModifier m
     y_ = startcy_ + up * upfactor;
     z_ = startcz_ - (sideways * s - forward * c * (-1)) * factor;
 
-    //} else if (btn == MouseButton::LeftButton) {
-
-  } else if (btn == MouseButton::MiddleButton) {
-    yaw_ = startyaw_ - FREE_TURN_SENSITIVITY * dx;
-    pitch_ = startpitch_ - LOOK_SENSITIVITY * dy;
-
-    // ensure valid values.
-    if (pitch_ < -M_PI_2) pitch_ = -M_PI_2;
-    if (pitch_ > M_PI_2) pitch_ = M_PI_2;
+  } else if (btn == MouseButton::RightButton) {
   }
 
   mutex_.unlock();

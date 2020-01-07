@@ -27,12 +27,12 @@ void KittiReader::initialize(const QString& directory) {
     velodyne_filenames_.push_back(velodyne_dir.filePath(entries.at(i)).toStdString());
   }
 
-  if (!base_dir_.exists("calib.txt"))
-    throw std::runtime_error("Missing calibration file: " + base_dir_.filePath("calib.txt").toStdString());
+  // if (!base_dir_.exists("calib.txt"))
+  //   throw std::runtime_error("Missing calibration file: " + base_dir_.filePath("calib.txt").toStdString());
 
-  calib_.initialize(base_dir_.filePath("calib.txt").toStdString());
+  // calib_.initialize(base_dir_.filePath("calib.txt").toStdString());
 
-  readPoses(base_dir_.filePath("poses.txt").toStdString(), poses_);
+  readPoses(base_dir_.filePath("poses.csv").toStdString(), poses_);
 
   // create label dir, etc.
   QDir labels_dir(base_dir_.filePath("labels"));
@@ -43,10 +43,15 @@ void KittiReader::initialize(const QString& directory) {
   for (uint32_t i = 0; i < velodyne_filenames_.size(); ++i) {
     QString filename = QFileInfo(QString::fromStdString(velodyne_filenames_[i])).baseName() + ".label";
     if (!labels_dir.exists(filename)) {
-      std::ifstream in(velodyne_filenames_[i].c_str());
-      in.seekg(0, std::ios::end);
-      uint32_t num_points = in.tellg() / (4 * sizeof(float));
-      in.close();
+      // get cloud size
+      // std::ifstream in(velodyne_filenames_[i].c_str());
+      // in.seekg(0, std::ios::end);
+      // uint32_t num_points = in.tellg() / (4 * sizeof(float));
+      // in.close();
+      pcl::PointCloud<driver::velodyne::PointXYZRRIARL> velodyne_cloud;
+      pcl::io::loadPCDFile(velodyne_filenames_[i], velodyne_cloud);
+      uint32_t num_points = velodyne_cloud.points.size();
+      std::cout << velodyne_filenames_[i] << "\t" << num_points << std::endl;
 
       std::ofstream out(labels_dir.filePath(filename).toStdString().c_str());
 
@@ -335,30 +340,57 @@ void KittiReader::update(const std::vector<uint32_t>& indexes, std::vector<Label
 }
 
 void KittiReader::readPoints(const std::string& filename, Laserscan& scan) {
-  std::ifstream in(filename.c_str(), std::ios::binary);
-  if (!in.is_open()) return;
+  // std::ifstream in(filename.c_str(), std::ios::binary);
+  // if (!in.is_open()) return;
+
+  // scan.clear();
+
+  // in.seekg(0, std::ios::end);
+  // uint32_t num_points = in.tellg() / (4 * sizeof(float));
+  // in.seekg(0, std::ios::beg);
+
+  // std::vector<float> values(4 * num_points);
+  // in.read((char*)&values[0], 4 * num_points * sizeof(float));
+
+  // in.close();
+  // std::vector<Point3f>& points = scan.points;
+  // std::vector<float>& remissions = scan.remissions;
+
+  // points.resize(num_points);
+  // remissions.resize(num_points);
+
+  // for (uint32_t i = 0; i < num_points; ++i) {
+  //   points[i].x = values[4 * i];
+  //   points[i].y = values[4 * i + 1];
+  //   points[i].z = values[4 * i + 2];
+  //   remissions[i] = values[4 * i + 3];
+  // }
 
   scan.clear();
+  pcl::PointCloud<driver::velodyne::PointXYZRRIARL> velodyne_cloud;
+  pcl::io::loadPCDFile(filename, velodyne_cloud);
+  uint32_t num_points = velodyne_cloud.points.size();
+  if (num_points <= 0) {
+    return;
+  }
 
-  in.seekg(0, std::ios::end);
-  uint32_t num_points = in.tellg() / (4 * sizeof(float));
-  in.seekg(0, std::ios::beg);
-
-  std::vector<float> values(4 * num_points);
-  in.read((char*)&values[0], 4 * num_points * sizeof(float));
-
-  in.close();
   std::vector<Point3f>& points = scan.points;
   std::vector<float>& remissions = scan.remissions;
-
   points.resize(num_points);
   remissions.resize(num_points);
-
   for (uint32_t i = 0; i < num_points; ++i) {
-    points[i].x = values[4 * i];
-    points[i].y = values[4 * i + 1];
-    points[i].z = values[4 * i + 2];
-    remissions[i] = values[4 * i + 3];
+    const auto& velodyne_point = velodyne_cloud.points.at(i);
+    if (velodyne_point.range < 1000.0 && velodyne_point.range > 0.1) {
+      points[i].x = velodyne_point.x;
+      points[i].y = velodyne_point.y;
+      points[i].z = velodyne_point.z;
+      remissions[i] = velodyne_point.intensity / 100.0;
+    } else {
+      points[i].x = 1000.0;
+      points[i].y = 1000.0;
+      points[i].z = 1000.0;
+      remissions[i] = 0;
+    }
   }
 }
 
@@ -385,9 +417,9 @@ void KittiReader::readPoses(const std::string& filename, std::vector<Eigen::Matr
   poses = KITTI::Odometry::loadPoses(filename);
 
   // convert from camera to velodyne coordinate system.
-  Eigen::Matrix4f Tr = calib_["Tr"];
-  Eigen::Matrix4f Tr_inv = Tr.inverse();
-  for (uint32_t i = 0; i < poses.size(); ++i) {
-    poses[i] = Tr_inv * poses[i] * Tr;
-  }
+  // Eigen::Matrix4f Tr = calib_["Tr"];
+  // Eigen::Matrix4f Tr_inv = Tr.inverse();
+  // for (uint32_t i = 0; i < poses.size(); ++i) {
+  //   poses[i] = Tr_inv * poses[i] * Tr;
+  // }
 }
