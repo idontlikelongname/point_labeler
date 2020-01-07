@@ -1512,7 +1512,6 @@ void Viewport::keyPressEvent(QKeyEvent* event) {
     case Qt::Key_Up:
       if (points_.size() > 0) {
         if (points_.size() == 0) return;
-        std::cout << "Top Down View\n";
         // auto mat = points_[singleScanIdx_]->pose.inverse();
         // std::cout << points_[singleScanIdx_]->pose << std::endl;
         // mCamera->setMatrix(mat);
@@ -1521,7 +1520,6 @@ void Viewport::keyPressEvent(QKeyEvent* event) {
         mat = mat.inverse();
         mat(2, 3) = 20.0;
         mat = mat.inverse();
-        std::cout << mat << std::endl;
         mCamera->setMatrix(mat);
         updateGL();
       }
@@ -2018,7 +2016,7 @@ void Viewport::setPlaneRemovalNormal(bool value) {
 }
 
 void Viewport::setPlaneRemovalNormalParams(float threshold, float A1, float A2, float A3, float direction) {
-  planeThresholdNormal_ = threshold;
+  planeThresholdNormal_ = threshold / 20.0;
   Eigen::Vector4f unit_vect(1.0, 0, 0, 0);
   //  auto rotX = glow::glRotateX(A1 * PI / 180);
   //  auto rotY = glow::glRotateY(A2 * PI / 180);

@@ -63,6 +63,7 @@ class PCLCamera : public glow::GlCamera {
   bool keyReleased(KeyboardKey key, KeyboardModifier modifier) override;
 
  protected:
+  void update();
   void move(float sideways, float up, float backwards);
   void zoom(float amount);
   void rotate(float yaw, float pitch);
@@ -71,16 +72,15 @@ class PCLCamera : public glow::GlCamera {
   float startx_{0.0f}, starty_{0.0f};
   float startyaw_{0.0f}, startpitch_{0.0f};
 
-  float yaw_{0.0f}, pitch_{0.0f};
+  float yaw_{0.0f}, pitch_{-M_PI_2};
   Eigen::Vector3f focal_point_ = Eigen::Vector3f::Zero();
-  float distance_ = 0.0;
+  float distance_ = 10.0;
 
   bool startdrag_{false};
   bool start_move_{false};
   float last_x_{0.0f}, last_y_{0.0f};
 
   //
-  float x_{0.0f}, y_{0.0f}, z_{0.0f};
   float startcx_{0.0f}, startcy_{0.0f}, startcz_{0.0f};
   float forwardVel_{0.0f}, upVel_{0.0f}, sideVel_{0.0f}, turnVel_{0.0f};
   // TODO: expose other parameters (sensitivity, etc.)
