@@ -1,0 +1,31 @@
+	<!-- mapilary labels, see https://research.mapillary.com/img/publications/ICCV17a.pdf  
+   and supplement: https://research.mapillary.com/img/publications/ICCV17a_supp.pdf -->
+<config>
+	<label>
+		<id>0</id>
+		<name>unlabeled</name>
+		<description>all points with no special label.</description>
+		<color>255 255 0</color>
+		<root>void</root>
+		<macro></macro>
+		<category>unlabeled</category>
+	</label>
+	<label>
+		<id>1</id>
+		<name>background</name>
+		<description></description>
+		<color>255 0 255</color>
+		<root>background</root>
+		<macro>background</macro>
+		<category>background</category>
+	</label>
+	<label>
+		<id>2</id>
+		<name>foreground</name>
+		<description></description>
+		<color>150 240 80</color>
+		<root>foreground</root>
+		<macro>foreground</macro>
+		<category>foreground</category>
+	</label>
+</config>
